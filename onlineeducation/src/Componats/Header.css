@@ -1,0 +1,10 @@
+
+
+
+
+
+
+.menu-links .nav > li:hover > a.no-arrow::after{
+    background: transparent;
+}
+

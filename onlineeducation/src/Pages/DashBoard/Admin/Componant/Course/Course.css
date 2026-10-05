@@ -1,0 +1,9 @@
+.courseform{
+    height: 52vh;
+    overflow-y: auto;
+}
+
+.scroll-height{
+    height: 100%;
+    overflow-y: scroll;
+}

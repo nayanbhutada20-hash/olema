@@ -1,0 +1,132 @@
+
+// ======================
+// Loading Component
+// ======================
+const Loading = () => (
+    <div id="loading-icon-bx">
+        <div className="spinner"></div>
+    </div>
+);
+
+// ======================
+// Auth Context
+// ======================
+const AuthContext = createContext();
+
+const AuthProvider = ({ children }) => {
+    const [user, setUser] = useState(null);
+    const [userDetail, setUserDetail] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const apiModel = new ApiModel();
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            if (!currentUser) {
+                setUser(null);
+                setUserDetail(null);
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                setUser(currentUser);
+                const data = { docId: currentUser.uid, displayName: currentUser.displayName };
+                const response = await apiModel.PostMethod(data, "RegistrationRead");
+
+                if (response?.data) {
+                    setUserDetail(response.data);
+                    console.log("✅ User details fetched:", response.data);
+                }
+
+            } catch (err) {
+                console.error("❌ Error fetching user details:", err);
+                setError(err);
+            }
+
+            setTimeout(()=>{
+                setIsLoading(false);
+            },3000)
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    return (
+        <AuthContext.Provider value={{ user, userDetail, isLoading, error }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+
+const useAuth = () => useContext(AuthContext);
+
+// ======================
+// Protected Route
+// ======================
+const ProtectedRoute = ({ children, requiredRole }) => {
+    const { user, userDetail, isLoading, error } = useAuth();
+    const location = useLocation();
+
+    useEffect(()=>{
+        console.log(`Userdetails= ${userDetail}`);
+    },[])
+
+    if (isLoading) return <Loading />;
+    if (error) return <Navigate to="/SignIn" replace state={{ from: location.pathname }} />;
+    if (!user) return <Navigate to="/SignIn" replace state={{ from: location.pathname }} />;
+    if (requiredRole && userDetail?.[0]?.Usertype !== requiredRole) return <Navigate to="/" replace />;
+
+    return children;
+};
+
+// ======================
+// App Component
+// ======================
+function AppRoutes() {
+    return (
+        <Suspense fallback={<Loading />}>
+            <Routes>
+                {/* Home */}
+                <Route path="/" element={<Home />} />
+
+                {/* Auth */}
+                <Route path="/SignIn" element={<LogIn />} />
+                <Route path="/SignUp" element={<SignUp />} />
+                <Route path="/ForgotPassword" element={<Forgot />} />
+
+                {/* Admin */}
+                <Route path="/Admin/DashBoard" element={<ProtectedRoute requiredRole="Admin"><AdminDashBoard /></ProtectedRoute>} />
+                <Route path="/Admin/courses" element={<ProtectedRoute requiredRole="Admin"><Courses /></ProtectedRoute>} />
+                <Route path="/Admin/Faculty" element={<ProtectedRoute requiredRole="Admin"><Faculty /></ProtectedRoute>} />
+                <Route path="/Admin/Event" element={<ProtectedRoute requiredRole="Admin"><Event /></ProtectedRoute>} />
+                <Route path="/Admin/Fees" element={<ProtectedRoute requiredRole="Admin"><Fees /></ProtectedRoute>} />
+                <Route path="/Admin/Chat" element={<ProtectedRoute requiredRole="Admin"><Chat /></ProtectedRoute>} />
+                <Route path="/Admin/Profile" element={<ProtectedRoute requiredRole="Admin"><MyProfile /></ProtectedRoute>} />
+
+                {/* Student */}
+                <Route path="/Student/StudentDashboard" element={<ProtectedRoute requiredRole="Student"><StudentDashboard /></ProtectedRoute>} />
+                <Route path="/Student/Courses" element={<ProtectedRoute requiredRole="Student"><StudentCourses /></ProtectedRoute>} />
+                <Route path="/Student/Profile" element={<ProtectedRoute requiredRole="Student"><StudentProfile /></ProtectedRoute>} />
+                <Route path="/Student/Events" element={<ProtectedRoute requiredRole="Student"><StudentEvents /></ProtectedRoute>} />
+                <Route path="/Student/Fees" element={<ProtectedRoute requiredRole="Student"><StudentFees /></ProtectedRoute>} />
+
+                {/* Faculty */}
+                <Route path="/Faculty/FacultyDashboard" element={<ProtectedRoute requiredRole="Faculty"><FacultyDashboard /></ProtectedRoute>} />
+                <Route path="/Faculty/Courses" element={<ProtectedRoute requiredRole="Faculty"><FacultyCourses /></ProtectedRoute>} />
+                <Route path="/Faculty/Profile" element={<ProtectedRoute requiredRole="Faculty"><FacultyProfile /></ProtectedRoute>} />
+                <Route path="/Faculty/Events" element={<ProtectedRoute requiredRole="Faculty"><FacultyEvents /></ProtectedRoute>} />
+            </Routes>
+        </Suspense>
+    );
+}
+
+export default function App() {
+    return (
+        <AuthProvider>
+            <Router>
+                <AppRoutes />
+            </Router>
+        </AuthProvider>
+    );
+}

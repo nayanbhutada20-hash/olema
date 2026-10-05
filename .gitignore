@@ -1,0 +1,9 @@
+node_modules/
+.env
+dist/
+build/
+target/
+.idea/
+*.log
+*.zip
+serviceAccountKey.json
